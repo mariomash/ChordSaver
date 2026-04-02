@@ -25,6 +25,13 @@ final class AppViewModel: ObservableObject {
     private var takeBook = TakeIndexBook()
     private var sessionFolder: URL!
 
+    private static let debugTimestampFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "HH:mm:ss.SSS"
+        return f
+    }()
+
     private var pendingFloatURL: URL?
     private var pendingFinalURL: URL?
     private var pendingChord: Chord?
@@ -63,6 +70,11 @@ final class AppViewModel: ObservableObject {
         if debugLogLines.count > maxDebugLogLines {
             debugLogLines.removeFirst(debugLogLines.count - maxDebugLogLines)
         }
+    }
+
+    private func appendDebugLogStamped(_ line: String) {
+        let ts = Self.debugTimestampFormatter.string(from: Date())
+        appendDebugLog("[\(ts)] \(line)")
     }
 
     func clearDebugLog() {
@@ -138,7 +150,7 @@ final class AppViewModel: ObservableObject {
             statusMessage = "Recording: \(chord.displayName) (take \(takeN))"
         } catch {
             let tech = AudioCaptureEngine.technicalErrorDescription(error)
-            appendDebugLog("[record failed] \(tech)")
+            appendDebugLogStamped("[record failed] \(tech)")
             statusMessage = AudioCaptureEngine.describeError(error)
             debugLogExpanded = true
         }
@@ -183,7 +195,7 @@ final class AppViewModel: ObservableObject {
             }
         } catch {
             let tech = AudioCaptureEngine.technicalErrorDescription(error)
-            appendDebugLog("[finalize failed] \(tech)")
+            appendDebugLogStamped("[finalize failed] \(tech)")
             statusMessage = AudioCaptureEngine.describeError(error)
             debugLogExpanded = true
             pendingFloatURL = nil

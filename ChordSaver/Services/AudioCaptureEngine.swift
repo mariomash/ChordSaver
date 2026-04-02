@@ -186,7 +186,7 @@ final class AudioCaptureEngine: ObservableObject {
             logDebug("using AVAudioConverter (resample or >2ch)")
         } else {
             converter = nil
-            logDebug("no AVAudioConverter (same rate, ≤2 ch)")
+            logDebug("no AVAudioConverter (same rate/channels/layout, ≤2 ch, float)")
         }
 
         let parent = url.deletingLastPathComponent()
@@ -264,6 +264,8 @@ final class AudioCaptureEngine: ObservableObject {
         }
         engine.inputNode.removeTap(onBus: 0)
         logDebug("tap removed, engine stopped=\(!engine.isRunning)")
+        // Drain tap callbacks so the last buffer is written before we close `audioFile` (avoids truncated CAF / finalize Obj‑C error 0).
+        processQueue.sync {}
         isRecording = false
         stopMeterTimer()
 
@@ -287,7 +289,7 @@ final class AudioCaptureEngine: ObservableObject {
         if let finalURL = finalizeToWAVURL {
             logDebug("finalize → \(finalURL.lastPathComponent) (float PCM copy)")
             do {
-                try Self.copyFloatPCMToWAV(source: floatURL, destination: finalURL)
+                try Self.copyFloatPCMToWAV(source: floatURL, destination: finalURL, log: { self.logDebug($0) })
                 logDebug("finalize OK")
             } catch {
                 logDebug("finalize FAILED \(Self.technicalErrorDescription(error))")
@@ -467,6 +469,7 @@ final class AudioCaptureEngine: ObservableObject {
                 self?.lastError = nil
             }
         } catch {
+            logDebug("writeOutScratch FAILED \(Self.technicalErrorDescription(error))")
             DispatchQueue.main.async { [weak self] in
                 self?.lastError = error.localizedDescription
             }
@@ -563,6 +566,9 @@ final class AudioCaptureEngine: ObservableObject {
                 .sorted()
                 .joined(separator: "; ")
             var s = "domain=\(e.domain) code=\(e.code) desc=\(e.localizedDescription)"
+            if e.domain == NSOSStatusErrorDomain {
+                s += " (OSStatus \(e.code) = '\(Self.fourCC(UInt32(bitPattern: Int32(e.code))))')"
+            }
             if !infoPairs.isEmpty {
                 s += " userInfo=[\(infoPairs)]"
             }
@@ -572,6 +578,17 @@ final class AudioCaptureEngine: ObservableObject {
             return s
         }
         return format(error as NSError, depth: 0)
+    }
+
+    private static func fourCC(_ value: UInt32) -> String {
+        let b0 = UInt8((value >> 24) & 0xff)
+        let b1 = UInt8((value >> 16) & 0xff)
+        let b2 = UInt8((value >> 8) & 0xff)
+        let b3 = UInt8(value & 0xff)
+        let chars = [b0, b1, b2, b3].map { c -> Character in
+            (32...126).contains(c) ? Character(UnicodeScalar(c)) : "?"
+        }
+        return String(chars)
     }
 
     private static func makeFloatTargetFormat() -> AVAudioFormat? {
@@ -587,6 +604,12 @@ final class AudioCaptureEngine: ObservableObject {
     private static func needsAVAudioConverter(from input: AVAudioFormat, to output: AVAudioFormat) -> Bool {
         if abs(input.sampleRate - output.sampleRate) > 0.5 { return true }
         if input.channelCount > 2 { return true }
+        // Mono→stereo (or any ch mismatch): the no-converter tap path requires `floatChannelData`;
+        // macOS often delivers mono as non-interleaved float with nil/misaligned views so **no samples**
+        // are written and the CAF stays at 0 frames (`read` then fails at finalize).
+        if input.channelCount != output.channelCount { return true }
+        if input.commonFormat != output.commonFormat { return true }
+        if input.isInterleaved != output.isInterleaved { return true }
         return false
     }
 
@@ -601,50 +624,223 @@ final class AudioCaptureEngine: ObservableObject {
         }
     }
 
-    /// Copies float 48 kHz interleaved stereo PCM from CAF (or any readable file with the same processing format) to WAV — **no** `AVAudioConverter` (int24 conversion was triggering `GenericObjCError`).
-    static func copyFloatPCMToWAV(source: URL, destination: URL) throws {
-        let inFile = try AVAudioFile(forReading: source)
-        let inFormat = inFile.processingFormat
+    /// Copies float 48 kHz mono or stereo PCM from CAF to **IEEE float stereo** WAV.
+    /// WAV bytes are written manually (RIFF + `WAVE_FORMAT_IEEE_FLOAT`); `AVAudioFile` output to `.wav` often raises `Foundation._GenericObjCError` (0) on some macOS versions.
+    static func copyFloatPCMToWAV(source: URL, destination: URL, log: (String) -> Void = { _ in }) throws {
+        let srcBytes: Int64 = (try? FileManager.default.attributesOfItem(atPath: source.path)[.size] as? Int64) ?? -1
+        log("finalize: src on disk bytes=\(srcBytes) path=\(source.lastPathComponent)")
 
-        guard inFormat.commonFormat == .pcmFormatFloat32,
-              abs(inFormat.sampleRate - targetSampleRate) < 0.5,
-              inFormat.channelCount == targetChannels,
-              inFormat.isInterleaved
+        log("finalize: open CAF forReading…")
+        let inFile: AVAudioFile
+        do {
+            inFile = try AVAudioFile(forReading: source)
+        } catch {
+            log("finalize: open CAF FAILED \(technicalErrorDescription(error))")
+            throw error
+        }
+
+        let srcFormat = inFile.processingFormat
+        log(
+            "finalize: CAF processingFormat sr=\(srcFormat.sampleRate) ch=\(srcFormat.channelCount) interleaved=\(srcFormat.isInterleaved) commonFormat.raw=\(srcFormat.commonFormat.rawValue) fileFrames=\(inFile.length)"
+        )
+
+        guard srcFormat.commonFormat == .pcmFormatFloat32,
+              abs(srcFormat.sampleRate - targetSampleRate) < 0.5,
+              srcFormat.channelCount >= 1, srcFormat.channelCount <= targetChannels
         else {
-            throw NSError(
+            let err = NSError(
                 domain: "ChordSaver",
                 code: 30,
-                userInfo: [NSLocalizedDescriptionKey: "Temp file format mismatch (need 48 kHz, stereo, interleaved float)."]
+                userInfo: [NSLocalizedDescriptionKey: "Temp file format mismatch (need 48 kHz, 1–2 ch, float32)."]
             )
+            log("finalize: format guard FAILED (see ChordSaver code 30)")
+            throw err
         }
 
         if FileManager.default.fileExists(atPath: destination.path) {
             try FileManager.default.removeItem(at: destination)
         }
 
-        let outFile: AVAudioFile
-        do {
-            outFile = try AVAudioFile(
-                forWriting: destination,
-                settings: Self.cafFloatStereoCaptureSettings,
-                commonFormat: .pcmFormatFloat32,
-                interleaved: true
-            )
-        } catch {
-            outFile = try AVAudioFile(forWriting: destination, settings: Self.cafFloatStereoCaptureSettings)
+        guard let interleavedStereo = makeFloatTargetFormat() else {
+            log("finalize: makeFloatTargetFormat nil")
+            throw NSError(domain: "ChordSaver", code: 1, userInfo: [NSLocalizedDescriptionKey: "Cannot build 48kHz float stereo format"])
         }
 
         let chunk: AVAudioFrameCount = 4096
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: inFormat, frameCapacity: chunk) else {
+        guard let readBuf = AVAudioPCMBuffer(pcmFormat: srcFormat, frameCapacity: chunk),
+              let writeBuf = AVAudioPCMBuffer(pcmFormat: interleavedStereo, frameCapacity: chunk)
+        else {
+            log("finalize: buffer alloc FAILED")
             throw NSError(domain: "ChordSaver", code: 12, userInfo: [NSLocalizedDescriptionKey: "Buffer alloc failed"])
         }
 
-        inFile.framePosition = 0
-        while true {
-            buffer.frameLength = 0
-            try inFile.read(into: buffer, frameCount: chunk)
-            if buffer.frameLength == 0 { break }
-            try outFile.write(from: buffer)
+        log("finalize: open WAV for raw IEEE float write…")
+        guard FileManager.default.createFile(atPath: destination.path, contents: nil) else {
+            log("finalize: createFile FAILED \(destination.path)")
+            throw NSError(domain: "ChordSaver", code: 35, userInfo: [NSLocalizedDescriptionKey: "Could not create WAV file."])
         }
+        let outHandle = try FileHandle(forWritingTo: destination)
+        defer {
+            try? outHandle.close()
+        }
+
+        // Placeholder header; patch RIFF size (offset 4) and data size (offset 40) after streaming PCM.
+        try outHandle.write(contentsOf: Self.placeholderFloatStereoWAVHeader())
+        var totalPCMBytes: UInt64 = 0
+        var chunkIndex = 0
+        inFile.framePosition = 0
+
+        // Empty CAF: `AVAudioFile.read` can throw GenericObjCError (0) instead of returning 0 frames.
+        if inFile.length == 0 {
+            log("finalize: CAF has 0 audio frames (nothing was written during capture); writing empty WAV")
+        } else {
+            while true {
+                readBuf.frameLength = 0
+                do {
+                    try inFile.read(into: readBuf, frameCount: chunk)
+                } catch {
+                    log("finalize: read chunk \(chunkIndex) FAILED \(technicalErrorDescription(error))")
+                    throw error
+                }
+                let n = Int(readBuf.frameLength)
+                if n == 0 { break }
+                writeBuf.frameLength = readBuf.frameLength
+                do {
+                    try packFloatStereoForWAV(from: readBuf, to: writeBuf, frames: n)
+                } catch {
+                    log("finalize: pack chunk \(chunkIndex) frames=\(n) FAILED \(technicalErrorDescription(error))")
+                    throw error
+                }
+                guard let interleavedPtr = writeBuf.floatChannelData?[0] else {
+                    log("finalize: missing floatChannelData after pack chunk \(chunkIndex)")
+                    throw NSError(domain: "ChordSaver", code: 31, userInfo: [NSLocalizedDescriptionKey: "Missing float channel data for finalize."])
+                }
+                let floatCount = n * Int(targetChannels)
+                let byteCount = floatCount * MemoryLayout<Float>.size
+                let chunkData = Data(buffer: UnsafeBufferPointer(start: interleavedPtr, count: floatCount))
+                do {
+                    try outHandle.write(contentsOf: chunkData)
+                } catch {
+                    log("finalize: FileHandle write chunk \(chunkIndex) bytes=\(byteCount) FAILED \(technicalErrorDescription(error))")
+                    throw error
+                }
+                totalPCMBytes += UInt64(byteCount)
+                chunkIndex += 1
+            }
+        }
+
+        let fileSize = UInt64(44) + totalPCMBytes
+        let riffChunkSize = UInt32(truncatingIfNeeded: fileSize - 8)
+        let dataChunkSize = UInt32(truncatingIfNeeded: totalPCMBytes)
+        try outHandle.seek(toOffset: 4)
+        try outHandle.write(contentsOf: riffChunkSize.littleEndianBytes)
+        try outHandle.seek(toOffset: 40)
+        try outHandle.write(contentsOf: dataChunkSize.littleEndianBytes)
+
+        log("finalize: WAV done chunks=\(chunkIndex) pcmBytes=\(totalPCMBytes) fileSize=\(fileSize)")
+    }
+
+    /// 44-byte canonical PCM WAV header: IEEE float stereo 48 kHz; RIFF + data sizes are zero until patched.
+    private static func placeholderFloatStereoWAVHeader() -> Data {
+        var d = Data()
+        d.append(contentsOf: "RIFF".utf8)
+        d.append(UInt32(0).littleEndianBytes)
+        d.append(contentsOf: "WAVE".utf8)
+        d.append(contentsOf: "fmt ".utf8)
+        d.append(UInt32(16).littleEndianBytes)
+        d.append(UInt16(3).littleEndianBytes) // WAVE_FORMAT_IEEE_FLOAT
+        d.append(UInt16(truncatingIfNeeded: targetChannels).littleEndianBytes)
+        d.append(UInt32(targetSampleRate).littleEndianBytes)
+        let byteRate = UInt32(targetSampleRate * Double(targetChannels) * Double(MemoryLayout<Float>.size))
+        d.append(byteRate.littleEndianBytes)
+        let blockAlign = UInt16(targetChannels) * UInt16(MemoryLayout<Float>.size)
+        d.append(blockAlign.littleEndianBytes)
+        d.append(UInt16(32).littleEndianBytes)
+        d.append(contentsOf: "data".utf8)
+        d.append(UInt32(0).littleEndianBytes)
+        return d
+    }
+
+    /// Copies float samples from `from` (1–2 ch, any interleaving) into `to`, matching `to.format` (48 kHz stereo float).
+    private static func packFloatStereoForWAV(from src: AVAudioPCMBuffer, to dst: AVAudioPCMBuffer, frames: Int) throws {
+        guard let srcFD = src.floatChannelData, let dstFD = dst.floatChannelData else {
+            throw NSError(domain: "ChordSaver", code: 31, userInfo: [NSLocalizedDescriptionKey: "Missing float channel data for finalize."])
+        }
+        let sch = Int(src.format.channelCount)
+        let dch = Int(dst.format.channelCount)
+        guard dch == 2, frames > 0 else {
+            throw NSError(domain: "ChordSaver", code: 33, userInfo: [NSLocalizedDescriptionKey: "Unsupported finalize channel layout."])
+        }
+
+        if dst.format.isInterleaved {
+            let d0 = dstFD[0]
+            if sch == 1 {
+                let s = srcFD[0]
+                for i in 0..<frames {
+                    let v = s[i]
+                    d0[2 * i] = v
+                    d0[2 * i + 1] = v
+                }
+                return
+            }
+            if sch == 2, src.format.isInterleaved {
+                let s = srcFD[0]
+                let byteCount = frames * 2 * MemoryLayout<Float>.size
+                memcpy(d0, s, byteCount)
+                return
+            }
+            if sch == 2 {
+                let l = srcFD[0]
+                let r = srcFD[1]
+                for i in 0..<frames {
+                    d0[2 * i] = l[i]
+                    d0[2 * i + 1] = r[i]
+                }
+                return
+            }
+        } else {
+            let dl = dstFD[0]
+            let dr = dstFD[1]
+            if sch == 1 {
+                let s = srcFD[0]
+                for i in 0..<frames {
+                    let v = s[i]
+                    dl[i] = v
+                    dr[i] = v
+                }
+                return
+            }
+            if sch == 2, src.format.isInterleaved {
+                let s = srcFD[0]
+                for i in 0..<frames {
+                    dl[i] = s[2 * i]
+                    dr[i] = s[2 * i + 1]
+                }
+                return
+            }
+            if sch == 2 {
+                let l = srcFD[0]
+                let r = srcFD[1]
+                memcpy(dl, l, frames * MemoryLayout<Float>.size)
+                memcpy(dr, r, frames * MemoryLayout<Float>.size)
+                return
+            }
+        }
+
+        throw NSError(domain: "ChordSaver", code: 34, userInfo: [NSLocalizedDescriptionKey: "Cannot pack source layout for WAV."])
+    }
+}
+
+private extension UInt16 {
+    var littleEndianBytes: Data {
+        var v = littleEndian
+        return Swift.withUnsafeBytes(of: &v) { Data($0) }
+    }
+}
+
+private extension UInt32 {
+    var littleEndianBytes: Data {
+        var v = littleEndian
+        return Swift.withUnsafeBytes(of: &v) { Data($0) }
     }
 }
