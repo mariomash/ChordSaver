@@ -3,8 +3,11 @@ import AudioToolbox
 import CoreAudio
 import Foundation
 
-/// Captures from the selected input device. Records **48 kHz stereo** float PCM, then finalizes to **24-bit linear PCM WAV** on stop.
+/// Captures from the selected input device. Records **48 kHz stereo float** to CAF, then finalizes to **lossless float WAV** (no conversion — avoids AVAudioConverter int24 Obj‑C failures).
 final class AudioCaptureEngine: ObservableObject {
+    /// Set from the app (e.g. `AppViewModel`) to capture a rolling technical log in the UI.
+    var debugLogHandler: ((String) -> Void)?
+
     @Published private(set) var isRecording = false
     @Published private(set) var peakDB: Float = -80
     @Published private(set) var rmsDB: Float = -80
@@ -40,6 +43,23 @@ final class AudioCaptureEngine: ObservableObject {
     static let targetSampleRate: Double = 48_000
     static let targetChannels: AVAudioChannelCount = 2
 
+    private static let debugTimestampFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "HH:mm:ss.SSS"
+        return f
+    }()
+
+    private func logDebug(_ message: String) {
+        let line = "[\(Self.debugTimestampFormatter.string(from: Date()))] \(message)"
+        DispatchQueue.main.async { [weak self] in
+            self?.debugLogHandler?(line)
+        }
+        #if DEBUG
+        print(line)
+        #endif
+    }
+
     init() {
         DispatchQueue.main.async { [weak self] in
             self?.updateInputFormatDescription()
@@ -51,12 +71,15 @@ final class AudioCaptureEngine: ObservableObject {
         do {
             try configureEngineInputDevice(device.deviceID)
             updateInputFormatDescription()
+            logDebug("applyInputDevice OK deviceID=\(device.deviceID)")
         } catch {
-            lastError = error.localizedDescription
+            logDebug("applyInputDevice FAILED \(Self.technicalErrorDescription(error))")
+            lastError = Self.describeError(error)
         }
     }
 
-    private func configureEngineInputDevice(_ deviceID: AudioDeviceID) throws {
+    /// - Parameter resumeEngine: If `true`, restarts the engine when it was running before this call. Set `false` before `installTap` / `removeTap` on the input node (required by AVAudioEngine).
+    private func configureEngineInputDevice(_ deviceID: AudioDeviceID, resumeEngine: Bool = true) throws {
         let wasRunning = engine.isRunning
         if wasRunning { engine.stop() }
         engine.reset()
@@ -65,7 +88,8 @@ final class AudioCaptureEngine: ObservableObject {
             try engine.inputNode.auAudioUnit.setDeviceID(deviceID)
         }
 
-        if wasRunning {
+        if resumeEngine, wasRunning {
+            engine.prepare()
             try engine.start()
         }
     }
@@ -82,15 +106,19 @@ final class AudioCaptureEngine: ObservableObject {
     func warmUp() {
         do {
             if selectedDeviceID != AudioInputDevice.defaultDeviceID {
-                try configureEngineInputDevice(selectedDeviceID)
+                try configureEngineInputDevice(selectedDeviceID, resumeEngine: true)
             }
             updateInputFormatDescription()
             if !engine.isRunning {
+                logDebug("warmUp prepare+start")
+                engine.prepare()
                 try engine.start()
             }
             lastError = nil
+            logDebug("warmUp OK running=\(engine.isRunning) \(inputFormatDescription)")
         } catch {
-            lastError = error.localizedDescription
+            logDebug("warmUp FAILED \(Self.technicalErrorDescription(error))")
+            lastError = Self.describeError(error)
         }
     }
 
@@ -101,29 +129,87 @@ final class AudioCaptureEngine: ObservableObject {
         }
     }
 
-    /// Writes **48 kHz stereo float** to `url` during capture; replaces existing file.
+    /// Writes **48 kHz stereo float** to `url` during capture (use a **.caf** URL for reliable creation). Replaces existing file.
     func startRecording(to url: URL) throws {
+        logDebug("startRecording begin \(url.path)")
         lastError = nil
-        try configureEngineInputDevice(selectedDeviceID)
+
+        // Do **not** call `engine.reset()` here — it tears down the graph and often leads to GenericObjCError / error 0 on the next tap/start.
+        if engine.isRunning {
+            logDebug("startRecording engine.stop()")
+            engine.stop()
+        }
+        engine.inputNode.removeTap(onBus: 0)
+
+        if selectedDeviceID != AudioInputDevice.defaultDeviceID {
+            logDebug("startRecording setDeviceID(\(selectedDeviceID))")
+            do {
+                try engine.inputNode.auAudioUnit.setDeviceID(selectedDeviceID)
+            } catch {
+                logDebug("setDeviceID FAILED \(Self.technicalErrorDescription(error))")
+                throw error
+            }
+        } else {
+            logDebug("startRecording system default input (no setDeviceID)")
+        }
 
         let inputFormat = engine.inputNode.outputFormat(forBus: 0)
+        logDebug(
+            "inputFormat sampleRate=\(inputFormat.sampleRate) channels=\(inputFormat.channelCount) interleaved=\(inputFormat.isInterleaved) commonFormat.raw=\(inputFormat.commonFormat.rawValue)"
+        )
+
+        guard inputFormat.sampleRate > 0, inputFormat.channelCount > 0 else {
+            let err = NSError(
+                domain: "ChordSaver",
+                code: 20,
+                userInfo: [NSLocalizedDescriptionKey: "Microphone input is not ready (0 Hz or 0 channels). Try “Refresh devices”, pick another input, or grant microphone access in System Settings."]
+            )
+            logDebug("INVALID inputFormat — \(Self.technicalErrorDescription(err))")
+            throw err
+        }
+
         updateInputFormatDescription()
 
         guard let outFmt = Self.makeFloatTargetFormat() else {
+            logDebug("makeFloatTargetFormat returned nil")
             throw NSError(domain: "ChordSaver", code: 1, userInfo: [NSLocalizedDescriptionKey: "Cannot build 48kHz float stereo format"])
         }
         outputFormat = outFmt
 
-        guard let conv = AVAudioConverter(from: inputFormat, to: outFmt) else {
-            throw NSError(domain: "ChordSaver", code: 2, userInfo: [NSLocalizedDescriptionKey: "Cannot create audio converter"])
+        if Self.needsAVAudioConverter(from: inputFormat, to: outFmt) {
+            guard let conv = AVAudioConverter(from: inputFormat, to: outFmt) else {
+                logDebug("AVAudioConverter init returned nil")
+                throw NSError(domain: "ChordSaver", code: 2, userInfo: [NSLocalizedDescriptionKey: "Cannot create audio converter"])
+            }
+            Self.applyChannelMap(converter: conv, inputChannels: inputFormat.channelCount)
+            converter = conv
+            logDebug("using AVAudioConverter (resample or >2ch)")
+        } else {
+            converter = nil
+            logDebug("no AVAudioConverter (same rate, ≤2 ch)")
         }
-        Self.applyChannelMap(converter: conv, inputChannels: inputFormat.channelCount)
-        converter = conv
+
+        let parent = url.deletingLastPathComponent()
+        do {
+            try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+            logDebug("ensure directory OK \(parent.path)")
+        } catch {
+            logDebug("createDirectory FAILED \(Self.technicalErrorDescription(error))")
+            throw error
+        }
 
         if FileManager.default.fileExists(atPath: url.path) {
             try FileManager.default.removeItem(at: url)
+            logDebug("removed existing temp file")
         }
-        audioFile = try AVAudioFile(forWriting: url, settings: outFmt.settings, commonFormat: outFmt.commonFormat, interleaved: outFmt.isInterleaved)
+
+        do {
+            audioFile = try AVAudioFile(forWriting: url, settings: Self.cafFloatStereoCaptureSettings)
+            logDebug("AVAudioFile forWriting OK (.caf)")
+        } catch {
+            logDebug("AVAudioFile forWriting FAILED \(Self.technicalErrorDescription(error))")
+            throw error
+        }
 
         let cap: AVAudioFrameCount = 4096
         scratchOutput = AVAudioPCMBuffer(pcmFormat: outFmt, frameCapacity: max(cap, 8192))
@@ -138,15 +224,26 @@ final class AudioCaptureEngine: ObservableObject {
 
         clipped = false
 
-        engine.inputNode.removeTap(onBus: 0)
+        logDebug("installTap bufferSize=\(cap)")
         engine.inputNode.installTap(onBus: 0, bufferSize: cap, format: inputFormat) { [weak self] buffer, _ in
             self?.processQueue.async {
                 self?.handleTap(buffer: buffer)
             }
         }
 
-        if !engine.isRunning {
+        logDebug("engine.prepare()")
+        engine.prepare()
+        do {
+            logDebug("engine.start()")
             try engine.start()
+            logDebug("engine.start() OK")
+        } catch {
+            logDebug("engine.start() FAILED \(Self.technicalErrorDescription(error))")
+            engine.inputNode.removeTap(onBus: 0)
+            audioFile = nil
+            converter = nil
+            scratchOutput = nil
+            throw error
         }
 
         recordStart = Date()
@@ -155,13 +252,18 @@ final class AudioCaptureEngine: ObservableObject {
         startMeterTimer()
     }
 
-    /// Stops capture. If `finalizeTo24BitURL` is set, rewrites float temp at `floatURL` to 24-bit WAV at that URL (replacing if present).
-    func stopRecording(floatURL: URL, finalizeTo24BitURL: URL?) throws -> RecordingStats {
+    /// Stops capture. If `finalizeToWAVURL` is set, copies float PCM from `floatURL` (.caf) to a **float WAV** at that URL (same layout as capture — no `AVAudioConverter`).
+    func stopRecording(floatURL: URL, finalizeToWAVURL: URL?) throws -> RecordingStats {
+        logDebug("stopRecording begin float=\(floatURL.lastPathComponent)")
         guard isRecording else {
             throw NSError(domain: "ChordSaver", code: 3, userInfo: [NSLocalizedDescriptionKey: "Not recording"])
         }
 
+        if engine.isRunning {
+            engine.stop()
+        }
         engine.inputNode.removeTap(onBus: 0)
+        logDebug("tap removed, engine stopped=\(!engine.isRunning)")
         isRecording = false
         stopMeterTimer()
 
@@ -182,13 +284,26 @@ final class AudioCaptureEngine: ObservableObject {
         let rmsLinear: Float = rt > 0 ? sqrt(ra / Float(rt)) : 0
         let envFlat: [Float] = env.flatMap { [$0.min, $0.max] }
 
-        if let finalURL = finalizeTo24BitURL {
-            try Self.convertFloatWAVToInt24WAV(source: floatURL, destination: finalURL)
+        if let finalURL = finalizeToWAVURL {
+            logDebug("finalize → \(finalURL.lastPathComponent) (float PCM copy)")
+            do {
+                try Self.copyFloatPCMToWAV(source: floatURL, destination: finalURL)
+                logDebug("finalize OK")
+            } catch {
+                logDebug("finalize FAILED \(Self.technicalErrorDescription(error))")
+                throw error
+            }
             try? FileManager.default.removeItem(at: floatURL)
         }
 
         if !engine.isRunning {
-            try? engine.start()
+            engine.prepare()
+            do {
+                try engine.start()
+                logDebug("idle engine restarted OK running=\(engine.isRunning)")
+            } catch {
+                logDebug("idle engine restart FAILED \(Self.technicalErrorDescription(error))")
+            }
         }
 
         peakDB = -80
@@ -247,7 +362,58 @@ final class AudioCaptureEngine: ObservableObject {
     private func handleTap(buffer: AVAudioPCMBuffer) {
         analyzeInputForMeters(buffer: buffer)
 
-        guard let converter, let outFmt = outputFormat, let file = audioFile else { return }
+        guard let outFmt = outputFormat, let file = audioFile else { return }
+        guard buffer.frameLength > 0 else { return }
+
+        let inFmt = buffer.format
+
+        // Same rate: avoid AVAudioConverter for common cases (fixes paramErr -50 from WAV / channel-map edge cases).
+        if converter == nil, abs(inFmt.sampleRate - outFmt.sampleRate) < 0.5 {
+            let n = Int(buffer.frameLength)
+            if inFmt.channelCount == 1, outFmt.channelCount == 2,
+               let inFD = buffer.floatChannelData, let outScratch = ensureScratchStereoFloat(frames: n, format: outFmt),
+               let outP = outScratch.floatChannelData?[0]
+            {
+                let s0 = inFD[0]
+                outScratch.frameLength = AVAudioFrameCount(n)
+                for i in 0..<n {
+                    let s = s0[i]
+                    outP[2 * i] = s
+                    outP[2 * i + 1] = s
+                }
+                writeOutScratch(outScratch, to: file)
+                return
+            }
+            if inFmt.channelCount == 2, outFmt.channelCount == 2,
+               let inFD = buffer.floatChannelData, let outScratch = ensureScratchStereoFloat(frames: n, format: outFmt),
+               let outP = outScratch.floatChannelData?[0]
+            {
+                outScratch.frameLength = AVAudioFrameCount(n)
+                if inFmt.isInterleaved {
+                    let p = inFD[0]
+                    for i in 0..<n {
+                        outP[2 * i] = p[2 * i]
+                        outP[2 * i + 1] = p[2 * i + 1]
+                    }
+                } else {
+                    let a = inFD[0]
+                    let b = inFD[1]
+                    for i in 0..<n {
+                        outP[2 * i] = a[i]
+                        outP[2 * i + 1] = b[i]
+                    }
+                }
+                writeOutScratch(outScratch, to: file)
+                return
+            }
+        }
+
+        guard let converter else {
+            DispatchQueue.main.async { [weak self] in
+                self?.lastError = "Unsupported input format for recording (channels=\(inFmt.channelCount), rate=\(inFmt.sampleRate))."
+            }
+            return
+        }
 
         var outCapacity = AVAudioFrameCount(Double(buffer.frameLength) * (outFmt.sampleRate / buffer.format.sampleRate) + 64)
         if outCapacity < 1024 { outCapacity = 1024 }
@@ -278,17 +444,31 @@ final class AudioCaptureEngine: ObservableObject {
                 break
             }
             if outScratch.frameLength > 0 {
-                do {
-                    try file.write(from: outScratch)
-                } catch {
-                    DispatchQueue.main.async { [weak self] in
-                        self?.lastError = error.localizedDescription
-                    }
-                    break
-                }
+                writeOutScratch(outScratch, to: file)
             }
             if status == .endOfStream || status == .inputRanDry {
                 break
+            }
+        }
+    }
+
+    private func ensureScratchStereoFloat(frames: Int, format: AVAudioFormat) -> AVAudioPCMBuffer? {
+        let need = AVAudioFrameCount(max(frames, 64))
+        if scratchOutput == nil || scratchOutput!.frameCapacity < need {
+            scratchOutput = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: max(need, 8192))
+        }
+        return scratchOutput
+    }
+
+    private func writeOutScratch(_ outScratch: AVAudioPCMBuffer, to file: AVAudioFile) {
+        do {
+            try file.write(from: outScratch)
+            DispatchQueue.main.async { [weak self] in
+                self?.lastError = nil
+            }
+        } catch {
+            DispatchQueue.main.async { [weak self] in
+                self?.lastError = error.localizedDescription
             }
         }
     }
@@ -352,28 +532,62 @@ final class AudioCaptureEngine: ObservableObject {
         }
     }
 
+    /// Linear PCM float stereo interleaved at 48 kHz — matches `cafFloatStereoCaptureSettings`.
+    private static let cafFloatStereoCaptureSettings: [String: Any] = [
+        AVFormatIDKey: kAudioFormatLinearPCM,
+        AVSampleRateKey: targetSampleRate,
+        AVNumberOfChannelsKey: targetChannels,
+        AVLinearPCMBitDepthKey: 32,
+        AVLinearPCMIsFloatKey: true,
+        AVLinearPCMIsBigEndianKey: false,
+        AVLinearPCMIsNonInterleaved: false,
+    ]
+
+    static func describeError(_ error: Error) -> String {
+        let ns = error as NSError
+        if ns.domain.contains("GenericObjCError") || (ns.domain == NSCocoaErrorDomain && ns.code == 0) {
+            return "Audio or file setup failed (internal error 0). Open **Debug log** below for the technical line, or try another input / restart the app."
+        }
+        if !ns.localizedDescription.isEmpty, ns.localizedDescription != "The operation couldn’t be completed." {
+            return ns.localizedDescription
+        }
+        return "\(ns.domain) (\(ns.code))"
+    }
+
+    /// Full bridge details for the debug panel (domain, code, userInfo, underlying error).
+    static func technicalErrorDescription(_ error: Error) -> String {
+        func format(_ e: NSError, depth: Int) -> String {
+            guard depth < 4 else { return "…" }
+            let infoPairs = e.userInfo
+                .map { "\($0.key)=\($0.value)" }
+                .sorted()
+                .joined(separator: "; ")
+            var s = "domain=\(e.domain) code=\(e.code) desc=\(e.localizedDescription)"
+            if !infoPairs.isEmpty {
+                s += " userInfo=[\(infoPairs)]"
+            }
+            if let u = e.userInfo[NSUnderlyingErrorKey] as? NSError {
+                s += " underlying=(\(format(u, depth: depth + 1)))"
+            }
+            return s
+        }
+        return format(error as NSError, depth: 0)
+    }
+
     private static func makeFloatTargetFormat() -> AVAudioFormat? {
+        // Interleaved stereo: required for reliable RIFF/WAV writes via AVAudioFile (non-interleaved often yields paramErr -50).
         AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
             sampleRate: targetSampleRate,
             channels: targetChannels,
-            interleaved: false
+            interleaved: true
         )
     }
 
-    private static func makeInt24TargetFormat() -> AVAudioFormat? {
-        var asbd = AudioStreamBasicDescription(
-            mSampleRate: targetSampleRate,
-            mFormatID: kAudioFormatLinearPCM,
-            mFormatFlags: UInt32(kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked | kAudioFormatFlagIsNonInterleaved),
-            mBytesPerPacket: 3,
-            mFramesPerPacket: 1,
-            mBytesPerFrame: 3,
-            mChannelsPerFrame: UInt32(targetChannels),
-            mBitsPerChannel: 24,
-            mReserved: 0
-        )
-        return AVAudioFormat(streamDescription: &asbd)
+    private static func needsAVAudioConverter(from input: AVAudioFormat, to output: AVAudioFormat) -> Bool {
+        if abs(input.sampleRate - output.sampleRate) > 0.5 { return true }
+        if input.channelCount > 2 { return true }
+        return false
     }
 
     private static func applyChannelMap(converter: AVAudioConverter, inputChannels: AVAudioChannelCount) {
@@ -387,62 +601,50 @@ final class AudioCaptureEngine: ObservableObject {
         }
     }
 
-    /// Reads float 48k stereo WAV and writes 24-bit 48k stereo WAV.
-    static func convertFloatWAVToInt24WAV(source: URL, destination: URL) throws {
+    /// Copies float 48 kHz interleaved stereo PCM from CAF (or any readable file with the same processing format) to WAV — **no** `AVAudioConverter` (int24 conversion was triggering `GenericObjCError`).
+    static func copyFloatPCMToWAV(source: URL, destination: URL) throws {
         let inFile = try AVAudioFile(forReading: source)
         let inFormat = inFile.processingFormat
 
-        guard let outFormat = makeInt24TargetFormat() else {
-            throw NSError(domain: "ChordSaver", code: 10, userInfo: [NSLocalizedDescriptionKey: "Missing int24 format"])
+        guard inFormat.commonFormat == .pcmFormatFloat32,
+              abs(inFormat.sampleRate - targetSampleRate) < 0.5,
+              inFormat.channelCount == targetChannels,
+              inFormat.isInterleaved
+        else {
+            throw NSError(
+                domain: "ChordSaver",
+                code: 30,
+                userInfo: [NSLocalizedDescriptionKey: "Temp file format mismatch (need 48 kHz, stereo, interleaved float)."]
+            )
         }
+
         if FileManager.default.fileExists(atPath: destination.path) {
             try FileManager.default.removeItem(at: destination)
         }
-        let outFile = try AVAudioFile(forWriting: destination, settings: outFormat.settings, commonFormat: outFormat.commonFormat, interleaved: outFormat.isInterleaved)
+
+        let outFile: AVAudioFile
+        do {
+            outFile = try AVAudioFile(
+                forWriting: destination,
+                settings: Self.cafFloatStereoCaptureSettings,
+                commonFormat: .pcmFormatFloat32,
+                interleaved: true
+            )
+        } catch {
+            outFile = try AVAudioFile(forWriting: destination, settings: Self.cafFloatStereoCaptureSettings)
+        }
 
         let chunk: AVAudioFrameCount = 4096
-        guard let inBuf = AVAudioPCMBuffer(pcmFormat: inFormat, frameCapacity: chunk) else {
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: inFormat, frameCapacity: chunk) else {
             throw NSError(domain: "ChordSaver", code: 12, userInfo: [NSLocalizedDescriptionKey: "Buffer alloc failed"])
         }
 
         inFile.framePosition = 0
         while true {
-            inBuf.frameLength = 0
-            try inFile.read(into: inBuf, frameCount: chunk)
-            if inBuf.frameLength == 0 { break }
-
-            guard let converter = AVAudioConverter(from: inFormat, to: outFormat) else {
-                throw NSError(domain: "ChordSaver", code: 11, userInfo: [NSLocalizedDescriptionKey: "Cannot create finalize converter"])
-            }
-
-            let outCap = max(chunk, inBuf.frameLength + 512)
-            guard let outBuf = AVAudioPCMBuffer(pcmFormat: outFormat, frameCapacity: outCap) else {
-                throw NSError(domain: "ChordSaver", code: 12, userInfo: [NSLocalizedDescriptionKey: "Buffer alloc failed"])
-            }
-
-            var supplied = false
-            let inputBlock: AVAudioConverterInputBlock = { _, outStatus in
-                if !supplied {
-                    supplied = true
-                    outStatus.pointee = .haveData
-                    return inBuf
-                }
-                outStatus.pointee = .noDataNow
-                return nil
-            }
-
-            while true {
-                outBuf.frameLength = 0
-                var error: NSError?
-                let status = converter.convert(to: outBuf, error: &error, withInputFrom: inputBlock)
-                if let error { throw error }
-                if outBuf.frameLength > 0 {
-                    try outFile.write(from: outBuf)
-                }
-                if status == .endOfStream || status == .inputRanDry {
-                    break
-                }
-            }
+            buffer.frameLength = 0
+            try inFile.read(into: buffer, frameCount: chunk)
+            if buffer.frameLength == 0 { break }
+            try outFile.write(from: buffer)
         }
     }
 }

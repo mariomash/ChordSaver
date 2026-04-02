@@ -17,7 +17,11 @@ final class AppViewModel: ObservableObject {
     @Published var isFinalizingAudio = false
     @Published var statusMessage: String = ""
 
+    @Published var debugLogExpanded = false
+    @Published private(set) var debugLogLines: [String] = []
+
     let audio = AudioCaptureEngine()
+    private let maxDebugLogLines = 400
     private var takeBook = TakeIndexBook()
     private var sessionFolder: URL!
 
@@ -32,7 +36,11 @@ final class AppViewModel: ObservableObject {
         sessionFolder = base.appendingPathComponent("ChordSaver", isDirectory: true)
             .appendingPathComponent("Sessions", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try? fm.createDirectory(at: sessionFolder, withIntermediateDirectories: true)
+        do {
+            try fm.createDirectory(at: sessionFolder, withIntermediateDirectories: true)
+        } catch {
+            statusMessage = "Cannot create session folder: \(AudioCaptureEngine.describeError(error))"
+        }
 
         do {
             chords = try ChordLibrary.loadBundled()
@@ -41,6 +49,29 @@ final class AppViewModel: ObservableObject {
         }
 
         refreshDevices()
+
+        audio.debugLogHandler = { [weak self] line in
+            Task { @MainActor in
+                self?.appendDebugLog(line)
+            }
+        }
+        appendDebugLog("[session] folder=\(sessionFolder.path)")
+    }
+
+    func appendDebugLog(_ line: String) {
+        debugLogLines.append(line)
+        if debugLogLines.count > maxDebugLogLines {
+            debugLogLines.removeFirst(debugLogLines.count - maxDebugLogLines)
+        }
+    }
+
+    func clearDebugLog() {
+        debugLogLines.removeAll()
+    }
+
+    func copyDebugLogToPasteboard() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(debugLogLines.joined(separator: "\n"), forType: .string)
     }
 
     /// Call from the main window `onAppear` so unit-test hosts do not start `AVAudioEngine` at launch.
@@ -94,7 +125,7 @@ final class AppViewModel: ObservableObject {
     private func startRecording() {
         guard let chord = currentChord else { return }
         let baseName = "\(chord.id)_\(UUID().uuidString.prefix(8))"
-        let floatURL = sessionFolder.appendingPathComponent("\(baseName)_float.wav")
+        let floatURL = sessionFolder.appendingPathComponent("\(baseName)_float.caf")
         let finalURL = sessionFolder.appendingPathComponent("\(baseName).wav")
 
         do {
@@ -106,7 +137,10 @@ final class AppViewModel: ObservableObject {
             pendingTakeIndex = takeN
             statusMessage = "Recording: \(chord.displayName) (take \(takeN))"
         } catch {
-            statusMessage = error.localizedDescription
+            let tech = AudioCaptureEngine.technicalErrorDescription(error)
+            appendDebugLog("[record failed] \(tech)")
+            statusMessage = AudioCaptureEngine.describeError(error)
+            debugLogExpanded = true
         }
     }
 
@@ -118,10 +152,10 @@ final class AppViewModel: ObservableObject {
         let takeN = pendingTakeIndex
 
         isFinalizingAudio = true
-        statusMessage = "Finalizing 24-bit WAV…"
+        statusMessage = "Finalizing WAV…"
 
         do {
-            let stats = try audio.stopRecording(floatURL: floatURL, finalizeTo24BitURL: finalURL)
+            let stats = try audio.stopRecording(floatURL: floatURL, finalizeToWAVURL: finalURL)
             pendingFloatURL = nil
             pendingFinalURL = nil
             pendingChord = nil
@@ -148,7 +182,10 @@ final class AppViewModel: ObservableObject {
                 statusMessage += " · End of chord list"
             }
         } catch {
-            statusMessage = error.localizedDescription
+            let tech = AudioCaptureEngine.technicalErrorDescription(error)
+            appendDebugLog("[finalize failed] \(tech)")
+            statusMessage = AudioCaptureEngine.describeError(error)
+            debugLogExpanded = true
             pendingFloatURL = nil
             pendingFinalURL = nil
             pendingChord = nil

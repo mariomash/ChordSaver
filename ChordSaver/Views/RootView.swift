@@ -77,7 +77,7 @@ struct RootView: View {
             Text("Capture")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text("48 kHz · 24-bit · stereo WAV")
+            Text("48 kHz · float · stereo WAV")
                 .font(.caption.monospaced())
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -145,8 +145,46 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
 
+            debugLogSection
+
             Spacer(minLength: 0)
         }
         .padding(.vertical, 16)
+    }
+
+    private var debugLogSection: some View {
+        DisclosureGroup(isExpanded: $vm.debugLogExpanded) {
+            VStack(alignment: .leading, spacing: 8) {
+                ScrollView {
+                    Text(vm.debugLogLines.joined(separator: "\n"))
+                        .font(.system(.caption2, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(minHeight: 100, maxHeight: 220)
+                .padding(8)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.04)))
+
+                HStack(spacing: 12) {
+                    Button("Copy log") {
+                        vm.copyDebugLogToPasteboard()
+                    }
+                    Button("Clear") {
+                        vm.clearDebugLog()
+                    }
+                }
+                .font(.caption)
+            }
+            .padding(.horizontal)
+        } label: {
+            HStack(spacing: 8) {
+                Text("Debug log")
+                    .font(.subheadline.weight(.semibold))
+                Text("(\(vm.debugLogLines.count) lines)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal)
     }
 }
