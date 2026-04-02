@@ -1,0 +1,523 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B00100000000000000000001 /* ChordSaverApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000001 /* ChordSaverApp.swift */; };
+		B00100000000000000000002 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000002 /* AppViewModel.swift */; };
+		B00100000000000000000003 /* Chord.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000003 /* Chord.swift */; };
+		B00100000000000000000004 /* SessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000004 /* SessionModels.swift */; };
+		B00100000000000000000005 /* AudioCaptureEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000005 /* AudioCaptureEngine.swift */; };
+		B00100000000000000000006 /* AudioDeviceEnumerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000006 /* AudioDeviceEnumerator.swift */; };
+		B00100000000000000000007 /* ChordLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000007 /* ChordLibrary.swift */; };
+		B00100000000000000000008 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000008 /* ExportService.swift */; };
+		B00100000000000000000009 /* FilenameSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000009 /* FilenameSanitizer.swift */; };
+		B0010000000000000000000A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010000000000000000000A /* RootView.swift */; };
+		B0010000000000000000000B /* RecorderStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010000000000000000000B /* RecorderStrip.swift */; };
+		B0010000000000000000000C /* FretboardDiagramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010000000000000000000C /* FretboardDiagramView.swift */; };
+		B0010000000000000000000D /* LastTakePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010000000000000000000D /* LastTakePanel.swift */; };
+		B0010000000000000000000E /* chords.json in Resources */ = {isa = PBXBuildFile; fileRef = F0010000000000000000000E /* chords.json */; };
+		B0010000000000000000000F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F0010000000000000000000F /* Assets.xcassets */; };
+		B00100000000000000000010 /* ChordSaverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000010 /* ChordSaverTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		F00100000000000000000001 /* ChordSaverApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordSaverApp.swift; sourceTree = "<group>"; };
+		F00100000000000000000002 /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
+		F00100000000000000000003 /* Chord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chord.swift; sourceTree = "<group>"; };
+		F00100000000000000000004 /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
+		F00100000000000000000005 /* AudioCaptureEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCaptureEngine.swift; sourceTree = "<group>"; };
+		F00100000000000000000006 /* AudioDeviceEnumerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDeviceEnumerator.swift; sourceTree = "<group>"; };
+		F00100000000000000000007 /* ChordLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordLibrary.swift; sourceTree = "<group>"; };
+		F00100000000000000000008 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
+		F00100000000000000000009 /* FilenameSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilenameSanitizer.swift; sourceTree = "<group>"; };
+		F0010000000000000000000A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		F0010000000000000000000B /* RecorderStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderStrip.swift; sourceTree = "<group>"; };
+		F0010000000000000000000C /* FretboardDiagramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FretboardDiagramView.swift; sourceTree = "<group>"; };
+		F0010000000000000000000D /* LastTakePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastTakePanel.swift; sourceTree = "<group>"; };
+		F0010000000000000000000E /* chords.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = chords.json; sourceTree = "<group>"; };
+		F0010000000000000000000F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F00100000000000000000011 /* ChordSaver.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChordSaver.entitlements; sourceTree = "<group>"; };
+		F00100000000000000000012 /* ChordSaver.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChordSaver.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00100000000000000000010 /* ChordSaverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordSaverTests.swift; sourceTree = "<group>"; };
+		F00100000000000000000013 /* ChordSaverTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChordSaverTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E00100000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E00100000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		G00100000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				G00100000000000000000002 /* ChordSaver */,
+				G00100000000000000000004 /* ChordSaverTests */,
+				G00100000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		G00100000000000000000002 /* ChordSaver */ = {
+			isa = PBXGroup;
+			children = (
+				F00100000000000000000001 /* ChordSaverApp.swift */,
+				F00100000000000000000002 /* AppViewModel.swift */,
+				G00100000000000000000005 /* Models */,
+				G00100000000000000000006 /* Services */,
+				G00100000000000000000007 /* Views */,
+				G00100000000000000000008 /* Resources */,
+				F0010000000000000000000F /* Assets.xcassets */,
+				F00100000000000000000011 /* ChordSaver.entitlements */,
+			);
+			path = ChordSaver;
+			sourceTree = "<group>";
+		};
+		G00100000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F00100000000000000000012 /* ChordSaver.app */,
+				F00100000000000000000013 /* ChordSaverTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		G00100000000000000000004 /* ChordSaverTests */ = {
+			isa = PBXGroup;
+			children = (
+				F00100000000000000000010 /* ChordSaverTests.swift */,
+			);
+			path = ChordSaverTests;
+			sourceTree = "<group>";
+		};
+		G00100000000000000000005 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				F00100000000000000000003 /* Chord.swift */,
+				F00100000000000000000004 /* SessionModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		G00100000000000000000006 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F00100000000000000000005 /* AudioCaptureEngine.swift */,
+				F00100000000000000000006 /* AudioDeviceEnumerator.swift */,
+				F00100000000000000000007 /* ChordLibrary.swift */,
+				F00100000000000000000008 /* ExportService.swift */,
+				F00100000000000000000009 /* FilenameSanitizer.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		G00100000000000000000007 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F0010000000000000000000A /* RootView.swift */,
+				F0010000000000000000000B /* RecorderStrip.swift */,
+				F0010000000000000000000C /* FretboardDiagramView.swift */,
+				F0010000000000000000000D /* LastTakePanel.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		G00100000000000000000008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F0010000000000000000000E /* chords.json */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		T00100000000000000000001 /* ChordSaver */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C00100000000000000000003 /* Build configuration list for PBXNativeTarget "ChordSaver" */;
+			buildPhases = (
+				S00100000000000000000001 /* Sources */,
+				E00100000000000000000001 /* Frameworks */,
+				R00100000000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ChordSaver;
+			productName = ChordSaver;
+			productReference = F00100000000000000000012 /* ChordSaver.app */;
+			productType = "com.apple.product-type.application";
+		};
+		T00100000000000000000002 /* ChordSaverTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C00100000000000000000004 /* Build configuration list for PBXNativeTarget "ChordSaverTests" */;
+			buildPhases = (
+				S00100000000000000000002 /* Sources */,
+				E00100000000000000000002 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D00100000000000000000001 /* PBXTargetDependency */,
+			);
+			name = ChordSaverTests;
+			productName = ChordSaverTests;
+			productReference = F00100000000000000000013 /* ChordSaverTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		P00100000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					T00100000000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					T00100000000000000000002 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = T00100000000000000000001;
+					};
+				};
+			};
+			buildConfigurationList = C00100000000000000000001 /* Build configuration list for PBXProject "ChordSaver" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = G00100000000000000000001;
+			productRefGroup = G00100000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				T00100000000000000000001 /* ChordSaver */,
+				T00100000000000000000002 /* ChordSaverTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		R00100000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B0010000000000000000000E /* chords.json in Resources */,
+				B0010000000000000000000F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		S00100000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B00100000000000000000001 /* ChordSaverApp.swift in Sources */,
+				B00100000000000000000002 /* AppViewModel.swift in Sources */,
+				B00100000000000000000003 /* Chord.swift in Sources */,
+				B00100000000000000000004 /* SessionModels.swift in Sources */,
+				B00100000000000000000005 /* AudioCaptureEngine.swift in Sources */,
+				B00100000000000000000006 /* AudioDeviceEnumerator.swift in Sources */,
+				B00100000000000000000007 /* ChordLibrary.swift in Sources */,
+				B00100000000000000000008 /* ExportService.swift in Sources */,
+				B00100000000000000000009 /* FilenameSanitizer.swift in Sources */,
+				B0010000000000000000000A /* RootView.swift in Sources */,
+				B0010000000000000000000B /* RecorderStrip.swift in Sources */,
+				B0010000000000000000000C /* FretboardDiagramView.swift in Sources */,
+				B0010000000000000000000D /* LastTakePanel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		S00100000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B00100000000000000000010 /* ChordSaverTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D00100000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = T00100000000000000000001 /* ChordSaver */;
+			targetProxy = Q00100000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXContainerItemProxy section */
+		Q00100000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = P00100000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = T00100000000000000000001;
+			remoteInfo = ChordSaver;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin XCBuildConfiguration section */
+		X00100000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		X00100000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		X00100000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ChordSaver/ChordSaver.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ChordSaver records audio from your selected input for chord practice takes.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chordsaver.ChordSaver;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		X00100000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ChordSaver/ChordSaver.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ChordSaver records audio from your selected input for chord practice takes.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chordsaver.ChordSaver;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		X00100000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chordsaver.ChordSaverTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ChordSaver.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ChordSaver";
+			};
+			name = Debug;
+		};
+		X00100000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chordsaver.ChordSaverTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ChordSaver.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ChordSaver";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C00100000000000000000001 /* Build configuration list for PBXProject "ChordSaver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				X00100000000000000000001 /* Debug */,
+				X00100000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C00100000000000000000003 /* Build configuration list for PBXNativeTarget "ChordSaver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				X00100000000000000000003 /* Debug */,
+				X00100000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C00100000000000000000004 /* Build configuration list for PBXNativeTarget "ChordSaverTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				X00100000000000000000005 /* Debug */,
+				X00100000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = P00100000000000000000001 /* Project object */;
+}
