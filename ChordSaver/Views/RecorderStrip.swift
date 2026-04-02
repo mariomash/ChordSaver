@@ -3,6 +3,7 @@ import SwiftUI
 struct RecorderStrip: View {
     @ObservedObject var audio: AudioCaptureEngine
     @ObservedObject var vm: AppViewModel
+    var canRecord: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -31,13 +32,13 @@ struct RecorderStrip: View {
                     Text("Peak")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    MeterBar(levelDB: audio.peakDB, style: .peak, clipped: audio.clipped)
+                    MeterBar(levelDB: audio.peakDB, style: .peak, clipped: audio.clipped, recording: audio.isRecording)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("RMS")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    MeterBar(levelDB: audio.rmsDB, style: .rms, clipped: false)
+                    MeterBar(levelDB: audio.rmsDB, style: .rms, clipped: false, recording: audio.isRecording)
                 }
             }
 
@@ -50,7 +51,7 @@ struct RecorderStrip: View {
                         systemImage: audio.isRecording ? "stop.circle.fill" : "record.circle"
                     )
                 }
-                .disabled(vm.isFinalizingAudio)
+                .disabled(vm.isFinalizingAudio || (!audio.isRecording && !canRecord))
 
                 if vm.isFinalizingAudio {
                     ProgressView()
@@ -93,6 +94,7 @@ struct MeterBar: View {
     var levelDB: Float
     var style: MeterStyle
     var clipped: Bool
+    var recording: Bool
 
     private var normalized: CGFloat {
         let floor: Float = -60
@@ -109,9 +111,13 @@ struct MeterBar: View {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(
                         LinearGradient(
-                            colors: style == .rms
-                                ? [Color.green.opacity(0.55), Color.yellow.opacity(0.65)]
-                                : [Color.yellow.opacity(0.55), Color.orange.opacity(0.75), Color.red.opacity(0.85)],
+                            colors: recording
+                                ? (style == .rms
+                                    ? [Color.green.opacity(0.55), Color.yellow.opacity(0.65)]
+                                    : [Color.yellow.opacity(0.55), Color.orange.opacity(0.75), Color.red.opacity(0.85)])
+                                : (style == .rms
+                                    ? [Color.cyan.opacity(0.35), Color.blue.opacity(0.45)]
+                                    : [Color.blue.opacity(0.35), Color.indigo.opacity(0.5)]),
                             startPoint: .leading,
                             endPoint: .trailing
                         )

@@ -10,19 +10,26 @@ struct RootView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
-            Divider().opacity(0.35)
-            HSplitView {
-                chordSidebar
-                    .frame(minWidth: 260, idealWidth: 280, maxWidth: 360)
-                mainPane
-                    .frame(minWidth: 560)
+        Group {
+            if vm.workspaceFolderURL == nil {
+                workspacePickerGate
+            } else {
+                VStack(spacing: 0) {
+                    topBar
+                    Divider().opacity(0.35)
+                    HSplitView {
+                        chordSidebar
+                            .frame(minWidth: 260, idealWidth: 280, maxWidth: 360)
+                        mainPane
+                            .frame(minWidth: 560)
+                    }
+                }
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .focusable()
         .onKeyPress(.space) {
+            guard vm.workspaceFolderURL != nil else { return .ignored }
             guard !vm.isFinalizingAudio else { return .ignored }
             if focusedField == .search { return .ignored }
             vm.toggleRecord()
@@ -32,6 +39,30 @@ struct RootView: View {
             vm.refreshDevices()
             vm.startAudioSessionIfNeeded()
         }
+    }
+
+    private var workspacePickerGate: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "folder.badge.plus")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            Text("Choose a workspace folder")
+                .font(.title2.weight(.semibold))
+            Text("Recordings are saved as WAV files in this folder. Existing files named like ChordName_take01.wav are loaded when they match the chord library.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 420)
+            Button("Choose Folder…") {
+                vm.chooseWorkspaceFolder()
+            }
+            .keyboardShortcut(.defaultAction)
+            .controlSize(.large)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(32)
     }
 
     private var topBar: some View {
@@ -60,12 +91,24 @@ struct RootView: View {
 
             Spacer()
 
-            formatBadge
-
-            Button("Export Session…") {
-                vm.exportSession()
+            if let url = vm.workspaceFolderURL {
+                HStack(spacing: 8) {
+                    Text("Workspace")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(url.lastPathComponent)
+                        .font(.caption.monospaced())
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: 200, alignment: .trailing)
+                    Button("Change…") {
+                        vm.chooseWorkspaceFolder()
+                    }
+                    .font(.caption)
+                }
             }
-            .keyboardShortcut("e", modifiers: [.command, .shift])
+
+            formatBadge
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -77,7 +120,7 @@ struct RootView: View {
             Text("Capture")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text("48 kHz · float · stereo WAV")
+            Text("48 kHz · 24-bit PCM · stereo WAV")
                 .font(.caption.monospaced())
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -105,12 +148,21 @@ struct RootView: View {
                 }
             )) {
                 ForEach(vm.filteredChords) { chord in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(chord.displayName)
-                            .font(.body.weight(.medium))
-                        Text(chord.category)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                    HStack(alignment: .center, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(chord.displayName)
+                                .font(.body.weight(.medium))
+                            Text(chord.category)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        Spacer(minLength: 4)
+                        if vm.chordIdsWithRecordedTakes.contains(chord.id) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.body)
+                                .foregroundStyle(.green)
+                                .accessibilityLabel("Recorded")
+                        }
                     }
                     .tag(chord.id)
                 }
@@ -121,7 +173,7 @@ struct RootView: View {
 
     private var mainPane: some View {
         VStack(spacing: 16) {
-            RecorderStrip(audio: audio, vm: vm)
+            RecorderStrip(audio: audio, vm: vm, canRecord: vm.workspaceFolderURL != nil)
 
             if let chord = vm.currentChord {
                 Text(chord.displayName)
@@ -137,7 +189,13 @@ struct RootView: View {
                 ContentUnavailableView("No chords", systemImage: "guitars")
             }
 
-            LastTakePanel(take: vm.lastTake)
+            LastTakePanel(
+                takes: vm.takesForCurrentChord,
+                lastTake: vm.mostRecentTakeForCurrentChord,
+                emptyMessage: vm.currentChord == nil
+                    ? "Select a chord in the list."
+                    : "No takes for this chord yet — Space to record."
+            )
 
             Text(vm.statusMessage)
                 .font(.caption)

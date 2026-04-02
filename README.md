@@ -6,7 +6,7 @@ macOS app for **recording short guitar takes per chord** from a built-in chord l
 
 - **Chord library** — Searchable list with categories; includes fretboard diagrams (movable shapes across roots).
 - **Audio input** — Pick a macOS input device; recordings use `AVAudioEngine`.
-- **Takes** — Record/stop per chord; numbered takes per chord, waveform preview and level info on the last take.
+- **Takes** — Record/stop per chord; numbered takes per chord, with a selectable take list plus waveform preview and level info.
 - **Session export** — **Session → Export Session…** (⌘⇧E) copies WAV files to a user-selected folder with sanitized filenames.
 
 Session audio lives under **Application Support** (`ChordSaver/Sessions/<session-id>/`).

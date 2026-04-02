@@ -14,10 +14,9 @@ struct ChordSaverApp: App {
         .defaultSize(width: 1100, height: 760)
         .commands {
             CommandMenu("Session") {
-                Button("Export Session…") {
-                    viewModel.exportSession()
+                Button("Choose Workspace Folder…") {
+                    viewModel.chooseWorkspaceFolder()
                 }
-                .keyboardShortcut("e", modifiers: [.command, .shift])
             }
         }
     }

@@ -14,7 +14,8 @@
 		B00100000000000000000005 /* AudioCaptureEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000005 /* AudioCaptureEngine.swift */; };
 		B00100000000000000000006 /* AudioDeviceEnumerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000006 /* AudioDeviceEnumerator.swift */; };
 		B00100000000000000000007 /* ChordLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000007 /* ChordLibrary.swift */; };
-		B00100000000000000000008 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000008 /* ExportService.swift */; };
+		B00100000000000000000008 /* TakeFileScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000008 /* TakeFileScanner.swift */; };
+		B00100000000000000000016 /* WorkspaceFolderAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000016 /* WorkspaceFolderAccess.swift */; };
 		B00100000000000000000009 /* FilenameSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000009 /* FilenameSanitizer.swift */; };
 		B0010000000000000000000A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010000000000000000000A /* RootView.swift */; };
 		B0010000000000000000000B /* RecorderStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010000000000000000000B /* RecorderStrip.swift */; };
@@ -23,6 +24,8 @@
 		B0010000000000000000000E /* chords.json in Resources */ = {isa = PBXBuildFile; fileRef = F0010000000000000000000E /* chords.json */; };
 		B0010000000000000000000F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F0010000000000000000000F /* Assets.xcassets */; };
 		B00100000000000000000010 /* ChordSaverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000010 /* ChordSaverTests.swift */; };
+		B00100000000000000000011 /* WaveformEnvelopeBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000014 /* WaveformEnvelopeBuilder.swift */; };
+		B00100000000000000000012 /* WAVTrimService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00100000000000000000015 /* WAVTrimService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,7 +36,8 @@
 		F00100000000000000000005 /* AudioCaptureEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCaptureEngine.swift; sourceTree = "<group>"; };
 		F00100000000000000000006 /* AudioDeviceEnumerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDeviceEnumerator.swift; sourceTree = "<group>"; };
 		F00100000000000000000007 /* ChordLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordLibrary.swift; sourceTree = "<group>"; };
-		F00100000000000000000008 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
+		F00100000000000000000008 /* TakeFileScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeFileScanner.swift; sourceTree = "<group>"; };
+		F00100000000000000000016 /* WorkspaceFolderAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceFolderAccess.swift; sourceTree = "<group>"; };
 		F00100000000000000000009 /* FilenameSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilenameSanitizer.swift; sourceTree = "<group>"; };
 		F0010000000000000000000A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		F0010000000000000000000B /* RecorderStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderStrip.swift; sourceTree = "<group>"; };
@@ -45,6 +49,8 @@
 		F00100000000000000000012 /* ChordSaver.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChordSaver.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F00100000000000000000010 /* ChordSaverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordSaverTests.swift; sourceTree = "<group>"; };
 		F00100000000000000000013 /* ChordSaverTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChordSaverTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00100000000000000000014 /* WaveformEnvelopeBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformEnvelopeBuilder.swift; sourceTree = "<group>"; };
+		F00100000000000000000015 /* WAVTrimService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WAVTrimService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,8 +127,11 @@
 				F00100000000000000000005 /* AudioCaptureEngine.swift */,
 				F00100000000000000000006 /* AudioDeviceEnumerator.swift */,
 				F00100000000000000000007 /* ChordLibrary.swift */,
-				F00100000000000000000008 /* ExportService.swift */,
+				F00100000000000000000008 /* TakeFileScanner.swift */,
+				F00100000000000000000016 /* WorkspaceFolderAccess.swift */,
 				F00100000000000000000009 /* FilenameSanitizer.swift */,
+				F00100000000000000000014 /* WaveformEnvelopeBuilder.swift */,
+				F00100000000000000000015 /* WAVTrimService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -245,8 +254,11 @@
 				B00100000000000000000005 /* AudioCaptureEngine.swift in Sources */,
 				B00100000000000000000006 /* AudioDeviceEnumerator.swift in Sources */,
 				B00100000000000000000007 /* ChordLibrary.swift in Sources */,
-				B00100000000000000000008 /* ExportService.swift in Sources */,
+				B00100000000000000000008 /* TakeFileScanner.swift in Sources */,
+				B00100000000000000000016 /* WorkspaceFolderAccess.swift in Sources */,
 				B00100000000000000000009 /* FilenameSanitizer.swift in Sources */,
+				B00100000000000000000011 /* WaveformEnvelopeBuilder.swift in Sources */,
+				B00100000000000000000012 /* WAVTrimService.swift in Sources */,
 				B0010000000000000000000A /* RootView.swift in Sources */,
 				B0010000000000000000000B /* RecorderStrip.swift in Sources */,
 				B0010000000000000000000C /* FretboardDiagramView.swift in Sources */,
